@@ -16,7 +16,7 @@ class Point{
 }
 
 //calculate orientation
-function orientation(a,b,c){
+ function orientation(a,b,c){
     //it's a determinant of these points
     const v = a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y);
     if(v<0) return -1; //clock wise
@@ -28,7 +28,7 @@ function distSq(a,b){
     return (a.x - b.x) * (a.x - b.x) +  (a.y - b.y) * (a.y - b.y);
 }
 
-function findConvexHull(points){
+export function findConvexHull(points){
     const n = points.length;
 
     if(n<3) return [[-1]];
@@ -81,4 +81,3 @@ function findConvexHull(points){
     return st.map(p => [Math.round(p.x), Math.round(p.y)]);
 }
 
-module.exports = findConvexHull;
