@@ -7,7 +7,8 @@ import  {Jimp}  from "jimp";
 import sharp from "sharp";
 import { intToRGBA, rgbaToInt } from "@jimp/utils";
 import { cssColorToHex } from "@jimp/utils";
-import {findConvexHull} from "../algo/grahamsScan.js"
+
+import { grahamScanSteps } from "../algo/grahamScanSteps.js";  
 import { distance } from "mathjs";
 
 
@@ -79,7 +80,7 @@ router.post("/uploadImage", upload.single("image"), async (req, res) => {
       }
     }
 
-    const hullPoints = findConvexHull(points);
+    const hullPoints = grahamScanSteps(points);
     const red = cssColorToHex("#FF0000");
 
     for(let i=0;i<hullPoints.length;i++){

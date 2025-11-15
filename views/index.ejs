@@ -1,14 +1,353 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convex Hull Visualizer</title>
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: monospace;
+        background: #0e0e0e;
+        color: #00ffea;
+    }
+
+    h1 {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .main {
+        width: 95%;
+        margin: auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .panel {
+        border: 1px solid #00ffc3;
+        padding: 20px;
+        border-radius: 5px;
+        background: rgba(0, 255, 200, 0.05);
+    }
+
+    .panel h2 {
+        margin-top: 0;
+        font-size: 20px;
+        color: #00ffc3;
+    }
+
+    #terminal {
+        background: #000;
+        height: 250px;
+        overflow-y: scroll;
+        padding: 10px;
+        font-size: 13px;
+        border: 1px solid #00ffc3;
+    }
+
+    .img-box {
+        border: 1px solid #00ffc3;
+        padding: 10px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .progress-bar-container {
+        margin: 10px 0;
+        height: 10px;
+        width: 100%;
+        background: #044;
+        border-radius: 5px;
+    }
+
+    .progress-bar {
+        height: 10px;
+        width: 0%;
+        background: #00ffea;
+        transition: width 0.5s ease;
+    }
+
+    #pixelCanvas {
+        border: 1px solid #00ffc3;
+        background: #000;
+    }
+
+    button {
+        padding: 10px 15px;
+        background: #00ffea;
+        border: none;
+        color: #000;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 12px;
+    }
+</style>
 </head>
+
 <body>
-    <h1>Upload photo</h1>
-    <form method="post" action="" enctype="multipart/form-data">
-        <input type="file" name="image" placeholder="Upload image">
-    </form>
+
+<h1>Convex Hull Visualizer</h1>
+
+<div class="main">
+
+    <!-- LEFT SIDE PANELS -->
+    <div class="panel">
+        <h2>Upload & Controls</h2>
+        <h2><u>Try to upload single object image</u></h2>
+        <input type="file" id="uploadInput" accept="image/*">
+        <button id="sendBtn">Process Image</button>
+        <p id="status"></p>
+
+        <h2>Live Processing Logs</h2>
+        <div id="terminal"></div>
+
+        <h2>Byte Stream Monitor</h2>
+        <p id="byteCount">Received: 0 KB</p>
+
+        <h2>Pixel Activity</h2>
+        <canvas id="pixelCanvas" width="200" height="200"></canvas>
+    </div>
+
+    <!-- RIGHT SIDE PANELS: IMAGES -->
+    <div class="panel">
+        <h2>Processing Progress</h2>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress"></div>
+        </div>
+
+        <div class="img-box">
+            <h3>Step 1: Resized Image</h3>
+            <img id="step1" width="200">
+        </div>
+
+        <div class="img-box">
+            <h3>Step 2: Grayscale</h3>
+            <img id="step2" width="200">
+        </div>
+
+        <div class="img-box">
+            <h3>Step 3: Convex Hull</h3>
+            <img id="step4" width="200">
+        </div>
+    </div>
+    <div class="panel" style="grid-column: span 2;">
+    <h2>Convex Hull Algorithm Visualizer</h2>
+
+    <div style="display:flex; gap:16px; align-items:flex-start;">
+
+        <canvas id="algoCanvas" width="400" height="400" 
+                style="border:1px solid #00ffc3; background:#000;"></canvas>
+
+        <div style="width:350px;">
+            <div style="margin-bottom:8px;">
+                <button id="playBtn">Play</button>
+                <button id="pauseBtn" disabled>Pause</button>
+                <button id="stepBtn">Step</button>
+                <span id="algoStatus" style="margin-left:12px; color:#0f0;"></span>
+            </div>
+
+            <h4>Edge Points (click to highlight)</h4>
+            <div id="pointsList"
+                 style="height:300px; overflow:auto; border:1px solid #00ffc3; padding:6px;"></div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+/* ----------------------- GLOBALS ----------------------- */
+let edgePoints = [];
+let hullStepsQueue = [];
+let currentStack = [];
+let currentConsider = null;
+let algoPlaying = false;
+let stepTimer = null;
+
+const algoCanvas = document.getElementById("algoCanvas");
+const actx = algoCanvas.getContext("2d");
+
+const pointsListDiv = document.getElementById("pointsList");
+const algoStatus = document.getElementById("algoStatus");
+
+const scale = 2;
+
+const socket = new WebSocket("ws://localhost:3000");
+let selectedFile = null;
+let currentStep = null;
+let totalBytesReceived = 0;
+
+const term = document.getElementById("terminal");
+const pixelCtx = pixelCanvas.getContext("2d");
+
+function log(msg) {
+    term.innerHTML += msg + "<br>";
+    term.scrollTop = term.scrollHeight;
+}
+
+/* ---------------------- DRAWING LOGIC ---------------------- */
+function drawAll() {
+    actx.fillStyle = "#000";
+    actx.fillRect(0, 0, algoCanvas.width, algoCanvas.height);
+
+    actx.fillStyle = "#888";
+    for (const p of edgePoints) {
+        actx.fillRect(p[0] * scale, p[1] * scale, 2, 2);
+    }
+
+    if (currentStack.length > 0) {
+        actx.strokeStyle = "#00ffea";
+        actx.lineWidth = 2;
+        actx.beginPath();
+        actx.moveTo(currentStack[0][0] * scale, currentStack[0][1] * scale);
+        for (let i = 1; i < currentStack.length; i++) {
+            actx.lineTo(currentStack[i][0] * scale, currentStack[i][1] * scale);
+        }
+        actx.stroke();
+
+        for (const p of currentStack) {
+            actx.fillStyle = "#00ffea";
+            actx.beginPath();
+            actx.arc(p[0] * scale, p[1] * scale, 4, 0, Math.PI * 2);
+            actx.fill();
+        }
+    }
+
+    if (currentConsider) {
+        actx.strokeStyle = "yellow";
+        actx.beginPath();
+        actx.arc(currentConsider[0] * scale, currentConsider[1] * scale, 6, 0, Math.PI * 2);
+        actx.stroke();
+    }
+}
+
+function renderPointsList() {
+    pointsListDiv.innerHTML = "";
+    edgePoints.forEach((p, i) => {
+        const el = document.createElement("div");
+        el.style.cursor = "pointer";
+        el.innerText = `${i}: [${p[0]}, ${p[1]}]`;
+        el.onclick = () => {
+            currentConsider = p;
+            drawAll();
+        };
+        pointsListDiv.appendChild(el);
+    });
+}
+
+/* ---------------------- ALGO PLAYER LOGIC ---------------------- */
+async function doStep() {
+    if (hullStepsQueue.length === 0) {
+        algoPlaying = false;
+        playBtn.disabled = false;
+        pauseBtn.disabled = true;
+        algoStatus.innerText = "Done";
+        return;
+    }
+
+    const step = hullStepsQueue.shift();
+
+    currentConsider = step.point;
+    currentStack = step.stack || [];
+
+    algoStatus.innerText = `Action: ${step.action}`;
+    drawAll();
+
+    if (algoPlaying) {
+        stepTimer = setTimeout(doStep, 150);
+    }
+}
+
+playBtn.onclick = () => {
+    if (hullStepsQueue.length === 0) return;
+    algoPlaying = true;
+    playBtn.disabled = true;
+    pauseBtn.disabled = false;
+    doStep();
+};
+
+pauseBtn.onclick = () => {
+    algoPlaying = false;
+    playBtn.disabled = false;
+    pauseBtn.disabled = true;
+    clearTimeout(stepTimer);
+};
+
+stepBtn.onclick = () => {
+    if (!algoPlaying) doStep();
+};
+
+/* ---------------------- WEBSOCKET HANDLER ---------------------- */
+socket.onopen = () => log("✔ Connected to WebSocket server");
+
+socket.onmessage = (event) => {
+
+    // If message is JSON → algorithm/meta info
+    if (typeof event.data === "string") {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === "log") {
+            log(msg.text);
+            return;
+        }
+
+        if (msg.type === "points") {
+            edgePoints = msg.points;
+            renderPointsList();
+            drawAll();
+            return;
+        }
+
+        if (msg.type === "hull-step") {
+            hullStepsQueue.push(msg.step);
+            return;
+        }
+
+        if (msg.type === "meta") {
+            currentStep = msg.step;
+            document.getElementById("progress").style.width =
+                (currentStep * 25) + "%";
+            return;
+        }
+    }
+
+    // Otherwise → binary image chunk
+    totalBytesReceived += event.data.byteLength;
+    document.getElementById("byteCount").innerText =
+        `Received: ${(totalBytesReceived / 1024).toFixed(2)} KB`;
+
+    const blob = new Blob([event.data], { type: "image/png" });
+    const url = URL.createObjectURL(blob);
+
+    document.getElementById("step" + currentStep).src = url;
+
+    // pixel noise flicker
+    for (let i = 0; i < 50; i++) {
+        pixelCtx.fillStyle = `rgb(${Math.random()*255|0},
+                                 ${Math.random()*255|0},
+                                 ${Math.random()*255|0})`;
+        pixelCtx.fillRect(Math.random()*200, Math.random()*200, 2, 2);
+    }
+};
+
+/* ---------------------- FILE UPLOAD ---------------------- */
+uploadInput.onchange = (e) => {
+    selectedFile = e.target.files[0];
+    log("🖼 Selected: " + selectedFile.name);
+};
+
+sendBtn.onclick = async () => {
+    if (!selectedFile) return alert("Select an image first!");
+    log("⏳ Sending image...");
+    const buffer = await selectedFile.arrayBuffer();
+    socket.send(buffer);
+};
+</script>
+
+
 </body>
 </html>
