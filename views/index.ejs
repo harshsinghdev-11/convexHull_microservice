@@ -176,7 +176,9 @@ const algoStatus = document.getElementById("algoStatus");
 
 const scale = 2;
 
-const socket = new WebSocket("ws://localhost:3000");
+const socket = new WebSocket(
+  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+);
 let selectedFile = null;
 let currentStep = null;
 let totalBytesReceived = 0;

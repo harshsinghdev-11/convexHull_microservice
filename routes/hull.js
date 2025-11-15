@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const findConvexHull = require("../algo/grahamScanSteps");
+const findConvexHull = require("../algo/grahamsScan");
 const validate = require("../middleware/validPoints");
 
 

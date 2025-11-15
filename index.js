@@ -13,11 +13,13 @@ import imageRoutes from "./routes/imageAccept.js";
 // import hullRoutes from "./algo/grahamsScan.js";
 import { WebSocketServer } from "ws";
 import { setupWebSocket } from "./ws/imageProcessingHandler.js";
+import cors from "cors"
+
 
 dotenv.config();
 const app = express();
 const server = http.createServer(app)
-
+app.use(cors())
 
 
 // ESM equivalent of __dirname
@@ -43,6 +45,6 @@ app.get("/",(req,res)=>{
 const PORT = process.env.PORT || 3000;
 setupWebSocket(server);
 
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+server.listen(PORT, "0.0.0.0",() => {
+  console.log(`Server running on ${PORT}`);
 });

@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { intToRGBA, rgbaToInt } from "@jimp/utils";
 import { cssColorToHex } from "@jimp/utils";
 
-import { grahamScanSteps } from "../algo/grahamScanSteps.js";  
+import { grahamScanSteps } from "../algo/grahamsScan.js";  
 import { distance } from "mathjs";
 
 
@@ -91,7 +91,7 @@ router.post("/uploadImage", upload.single("image"), async (req, res) => {
     }
 
     const outputBuffer = await colorImage.getBuffer("image/png");
-    console.log(outputBuffer);
+
     await  colorImage.write(path.join(__dirname,"finalImage.png"));
     res.set("Content-Type", "image/png");
     res.send(outputBuffer);
