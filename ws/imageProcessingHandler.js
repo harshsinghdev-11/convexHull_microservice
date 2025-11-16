@@ -145,10 +145,10 @@ redisSub.subscribe("image_jobs", async (message) => {
       JSON.stringify({ type: "complete" })
     );
 
-    console.log(`✅ Image processing completed for ${socketId}`);
+    console.log(`Image processing completed for ${socketId}`);
 
   } catch (error) {
-    console.error("❌ Image processing error:", error);
+    console.error("Image processing error:", error);
     await redisPub.publish(
       `user:${socketId}`,
       JSON.stringify({ 

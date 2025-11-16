@@ -1,0 +1,40 @@
+services:
+  # Redis Service
+  - type: redis
+    name: convex-hull-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Allow connections from Render services
+
+  # Node.js Application
+  - type: web
+    name: convex-hull-app
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: convex-hull-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: convex-hull-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: convex-hull-redis
+          property: password
+      - key: REDIS_USERNAME
+        fromService:
+          type: redis
+          name: convex-hull-redis
+          property: username
+
