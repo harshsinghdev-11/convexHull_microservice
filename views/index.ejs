@@ -130,32 +130,38 @@
         </div>
 
         <div class="img-box">
-            <h3>Step 3: Convex Hull</h3>
+            <h3>Step 3: Edge Detection</h3>
+            <img id="step3" width="200">
+        </div>
+
+        <div class="img-box">
+            <h3>Step 4: Convex Hull</h3>
             <img id="step4" width="200">
         </div>
     </div>
+    
     <div class="panel" style="grid-column: span 2;">
-    <h2>Convex Hull Algorithm Visualizer</h2>
+        <h2>Convex Hull Algorithm Visualizer</h2>
 
-    <div style="display:flex; gap:16px; align-items:flex-start;">
+        <div style="display:flex; gap:16px; align-items:flex-start;">
 
-        <canvas id="algoCanvas" width="400" height="400" 
-                style="border:1px solid #00ffc3; background:#000;"></canvas>
+            <canvas id="algoCanvas" width="400" height="400" 
+                    style="border:1px solid #00ffc3; background:#000;"></canvas>
 
-        <div style="width:350px;">
-            <div style="margin-bottom:8px;">
-                <button id="playBtn">Play</button>
-                <button id="pauseBtn" disabled>Pause</button>
-                <button id="stepBtn">Step</button>
-                <span id="algoStatus" style="margin-left:12px; color:#0f0;"></span>
+            <div style="width:350px;">
+                <div style="margin-bottom:8px;">
+                    <button id="playBtn">Play</button>
+                    <button id="pauseBtn" disabled>Pause</button>
+                    <button id="stepBtn">Step</button>
+                    <span id="algoStatus" style="margin-left:12px; color:#0f0;"></span>
+                </div>
+
+                <h4>Edge Points (click to highlight)</h4>
+                <div id="pointsList"
+                     style="height:300px; overflow:auto; border:1px solid #00ffc3; padding:6px;"></div>
             </div>
-
-            <h4>Edge Points (click to highlight)</h4>
-            <div id="pointsList"
-                 style="height:300px; overflow:auto; border:1px solid #00ffc3; padding:6px;"></div>
         </div>
     </div>
-</div>
 
 </div>
 
@@ -167,6 +173,7 @@ let currentStack = [];
 let currentConsider = null;
 let algoPlaying = false;
 let stepTimer = null;
+let socketId = null;
 
 const algoCanvas = document.getElementById("algoCanvas");
 const actx = algoCanvas.getContext("2d");
@@ -287,69 +294,151 @@ stepBtn.onclick = () => {
 socket.onopen = () => log("✔ Connected to WebSocket server");
 
 socket.onmessage = (event) => {
-
-    // If message is JSON → algorithm/meta info
-    if (typeof event.data === "string") {
+    // All messages are now JSON strings
+    try {
         const msg = JSON.parse(event.data);
 
+        // Handle welcome message with socketId
+        if (msg.type === "welcome") {
+            socketId = msg.socketId;
+            log(`✔ Connected with ID: ${socketId}`);
+            return;
+        }
+
+        // Handle log messages
         if (msg.type === "log") {
             log(msg.text);
             return;
         }
 
+        // Handle edge points
         if (msg.type === "points") {
             edgePoints = msg.points;
+            log(`📍 Received ${edgePoints.length} edge points`);
             renderPointsList();
             drawAll();
             return;
         }
 
+        // Handle hull animation steps
         if (msg.type === "hull-step") {
             hullStepsQueue.push(msg.step);
             return;
         }
 
+        // Handle metadata (step progress)
         if (msg.type === "meta") {
             currentStep = msg.step;
             document.getElementById("progress").style.width =
                 (currentStep * 25) + "%";
+            log(`⚙️ Processing step ${currentStep}...`);
             return;
         }
+
+        // Handle image data (base64 encoded)
+        if (msg.type === "image") {
+            const base64Data = msg.data;
+            const step = msg.step;
+            
+            // Convert base64 to blob
+            const byteString = atob(base64Data);
+            const byteArray = new Uint8Array(byteString.length);
+            for (let i = 0; i < byteString.length; i++) {
+                byteArray[i] = byteString.charCodeAt(i);
+            }
+            const blob = new Blob([byteArray], { type: "image/png" });
+            const url = URL.createObjectURL(blob);
+
+            // Display image
+            const imgElement = document.getElementById("step" + step);
+            if (imgElement) {
+                imgElement.src = url;
+                log(`🖼️ Step ${step} image received`);
+            }
+
+            // Update byte counter
+            totalBytesReceived += byteArray.length;
+            document.getElementById("byteCount").innerText =
+                `Received: ${(totalBytesReceived / 1024).toFixed(2)} KB`;
+
+            // Pixel noise flicker
+            for (let i = 0; i < 50; i++) {
+                pixelCtx.fillStyle = `rgb(${Math.random()*255|0},
+                                         ${Math.random()*255|0},
+                                         ${Math.random()*255|0})`;
+                pixelCtx.fillRect(Math.random()*200, Math.random()*200, 2, 2);
+            }
+            return;
+        }
+
+        // Handle completion
+        if (msg.type === "complete") {
+            log("✅ Processing complete!");
+            return;
+        }
+
+        // Handle errors
+        if (msg.type === "error") {
+            log(`❌ Error: ${msg.message}`);
+            return;
+        }
+
+    } catch (error) {
+        console.error("Error parsing message:", error);
     }
+};
 
-    // Otherwise → binary image chunk
-    totalBytesReceived += event.data.byteLength;
-    document.getElementById("byteCount").innerText =
-        `Received: ${(totalBytesReceived / 1024).toFixed(2)} KB`;
+socket.onerror = (error) => {
+    log("❌ WebSocket error");
+    console.error(error);
+};
 
-    const blob = new Blob([event.data], { type: "image/png" });
-    const url = URL.createObjectURL(blob);
-
-    document.getElementById("step" + currentStep).src = url;
-
-    // pixel noise flicker
-    for (let i = 0; i < 50; i++) {
-        pixelCtx.fillStyle = `rgb(${Math.random()*255|0},
-                                 ${Math.random()*255|0},
-                                 ${Math.random()*255|0})`;
-        pixelCtx.fillRect(Math.random()*200, Math.random()*200, 2, 2);
-    }
+socket.onclose = () => {
+    log("❌ Disconnected from server");
 };
 
 /* ---------------------- FILE UPLOAD ---------------------- */
 uploadInput.onchange = (e) => {
     selectedFile = e.target.files[0];
-    log("🖼 Selected: " + selectedFile.name);
+    log("🖼️ Selected: " + selectedFile.name);
 };
 
 sendBtn.onclick = async () => {
     if (!selectedFile) return alert("Select an image first!");
+    if (!socketId) return alert("Not connected to server!");
+    
     log("⏳ Sending image...");
-    const buffer = await selectedFile.arrayBuffer();
-    socket.send(buffer);
+    
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onload = async () => {
+        const base64Data = reader.result.split(',')[1]; // Remove data:image/png;base64, prefix
+        
+        // Send via HTTP POST to trigger Redis job
+        try {
+            const response = await fetch('/api/process-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    socketId: socketId,
+                    image: base64Data
+                })
+            });
+            
+            if (response.ok) {
+                log("✔️ Image sent for processing");
+            } else {
+                log("❌ Failed to send image");
+            }
+        } catch (error) {
+            log("❌ Error: " + error.message);
+        }
+    };
+    reader.readAsDataURL(selectedFile);
 };
 </script>
-
 
 </body>
 </html>

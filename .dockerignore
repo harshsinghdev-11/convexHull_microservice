@@ -2,5 +2,15 @@ node_modules
 npm-debug.log
 .git
 .gitignore
+.env
+.env.local
+*.md
+.vscode
+.idea
+.DS_Store
+dist
+build
+coverage
+.dockerignore
 Dockerfile
 docker-compose.yml

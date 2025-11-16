@@ -1,26 +1,19 @@
-// Use "type": "module" in your package.json
-// {
-//   "type": "module",
-//   ...
-// }
-
 import express from "express";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import http from "http"
+import http from "http";
+import cors from "cors";
 import imageRoutes from "./routes/imageAccept.js";
-// import hullRoutes from "./algo/grahamsScan.js";
-import { WebSocketServer } from "ws";
-import { setupWebSocket } from "./ws/imageProcessingHandler.js";
-import cors from "cors"
-
+import "./ws/imageProcessingHandler.js"; // Redis subscriber
+import { setupWebSocket } from "./ws/wsGateway.js"; // Import the function
 
 dotenv.config();
-const app = express();
-const server = http.createServer(app)
-app.use(cors())
 
+const app = express();
+const server = http.createServer(app);
+
+app.use(cors());
 
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -31,20 +24,21 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 
-// body parser
+// Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-// app.use("/api", hullRoutes);
 app.use("/api", imageRoutes);
-app.get("/",(req,res)=>{
+app.get("/", (req, res) => {
   res.render("index");
-})
+});
 
 const PORT = process.env.PORT || 3000;
-setupWebSocket(server);
 
-server.listen(PORT, "0.0.0.0",() => {
-  console.log(`Server running on ${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+  
+  // Setup WebSocket after server starts
+  setupWebSocket(server);
 });
