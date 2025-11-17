@@ -297,7 +297,13 @@ function startPlaying() {
     doStep();
 }
 
-playBtn.onclick = startPlaying;
+playBtn.onclick = ()=>{
+     if (hullStepsQueue.length === 0) return;
+    algoPlaying = true;
+    playBtn.disabled = true;
+    pauseBtn.disabled = false;
+    doStep();
+};
 
 pauseBtn.onclick = () => {
     algoPlaying = false;
@@ -343,7 +349,6 @@ socket.onmessage = (event) => {
         // Handle hull animation steps
         if (msg.type === "hull-step") {
             hullStepsQueue.push(msg.step);
-            startPlaying();
             return;
         }
 
@@ -351,7 +356,7 @@ socket.onmessage = (event) => {
         if (msg.type === "meta") {
             currentStep = msg.step;
             document.getElementById("progress").style.width =
-                (currentStep * 33.3) + "%";
+                (currentStep * 33) + "%";
             log(`Processing step ${currentStep}...`);
             return;
         }
@@ -374,7 +379,7 @@ socket.onmessage = (event) => {
             const imgElement = document.getElementById("step" + step);
             if (imgElement) {
                 imgElement.src = url;
-                log(`🖼️ Step ${step} image received`);
+                log(`Step ${step} image received`);
             }
 
             // Update byte counter
