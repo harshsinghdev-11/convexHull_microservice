@@ -25,8 +25,14 @@ if (redisPassword) {
 }
 
 // Create Redis clients for pub/sub
-export const redisPub = createClient(redisConfig);
-export const redisSub = createClient(redisConfig);
+export const redisPub = createClient({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT  
+});
+export const redisSub = createClient({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT  
+});
 
 redisPub.on("error", err => console.error("Redis pub error: ", err));
 redisSub.on("error", err => console.error("Redis sub error: ", err));
