@@ -5,33 +5,33 @@ dotenv.config();
 // Get Redis configuration from environment variables
 const redisHost = process.env.REDIS_HOST || 'localhost';
 const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
-const redisUsername = process.env.REDIS_USERNAME;
-const redisPassword = process.env.REDIS_PASSWORD; 
+const redisUsername = process.env.redisUsername;
+const redisPassword = process.env.redisPassword; 
 
-// Build Redis client configuration
-const redisConfig = {
-    socket: {
-        host: redisHost,
-        port: redisPort
-    }
-};
+console.log(typeof redisHost);
+console.log(typeof redisPort);
+console.log(typeof redisUsername);
+console.log(Number(process.env.redis_port));
 
-// Only add authentication if credentials are provided
-if (redisUsername) {
-    redisConfig.username = redisUsername;
-}
-if (redisPassword) {
-    redisConfig.password = redisPassword;
-}
+
+
 
 // Create Redis clients for pub/sub
 export const redisPub = createClient({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT  
+    username: process.env.redisUsername,
+    password: process.env.redisPassword,
+    socket: {
+        host: process.env.host,
+        port: Number(process.env.redis_port)
+    }
 });
-export const redisSub = createClient({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT  
+export const redisSub =createClient({
+    username: process.env.redisUsername,
+    password: process.env.redisPassword,
+    socket: {
+        host: process.env.host,
+        port: Number(process.env.redis_port)
+    }
 });
 
 redisPub.on("error", err => console.error("Redis pub error: ", err));
