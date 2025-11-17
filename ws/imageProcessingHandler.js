@@ -18,7 +18,10 @@ redisSub.subscribe("image_jobs", async (message) => {
 
     const colorImage = await Jimp.read(inputBuffer);
     colorImage.resize({ w: 200 });
-    
+    const resizedBuffer = await sharp(inputBuffer)
+      .resize(200)
+      .jpeg()
+      .toBuffer();
     const step1Buffer = await colorImage.getBuffer("image/png");
     await redisPub.publish(
       `user:${socketId}`,
@@ -81,7 +84,7 @@ redisSub.subscribe("image_jobs", async (message) => {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const color = intToRGBA(grayImage.getPixelColor(x, y));
-        if (color.r > 200) points.push([x, y]);
+        if (color.r > 120) points.push([x, y]);
       }
     }
 
@@ -109,13 +112,10 @@ redisSub.subscribe("image_jobs", async (message) => {
       })
     );
 
-    for (const s of steps) {
-      await redisPub.publish(
-        `user:${socketId}`,
-        JSON.stringify({ type: "hull-step", step: s })
-      );
-      await new Promise((r) => setTimeout(r, 5));
-    }
+   await redisPub.publish(
+    `user:${socketId}`,
+    JSON.stringify({type:"hull-steps",steps})
+   )
 
     // Step 4: Draw Final Hull
     await redisPub.publish(
@@ -123,29 +123,35 @@ redisSub.subscribe("image_jobs", async (message) => {
       JSON.stringify({ type: "meta", step: 4 })
     );
 
-    const red = cssColorToHex("#FF0000");
-    for (let i = 0; i < hull.length; i++) {
-      const [x0, y0] = hull[i];
-      const [x1, y1] = hull[(i + 1) % hull.length];
-      drawLine(colorImage, x0, y0, x1, y1, red);
-    }
+    // const red = cssColorToHex("#FF0000");
+    // for (let i = 0; i < hull.length; i++) {
+    //   const [x0, y0] = hull[i];
+    //   const [x1, y1] = hull[(i + 1) % hull.length];
+    //   drawLine(colorImage, x0, y0, x1, y1, red);
+    // }
+const hullSVG = `
+      <svg width="${width}" height="${height}">
+        <polyline 
+          points="${hull.map((p) => p.join(",")).join(" ")}"
+          stroke="red"
+          stroke-width="2"
+          fill="none"
+        />
+      </svg>
+    `;
 
-    const finalBuffer = await colorImage.getBuffer("image/png");
-    await redisPub.publish(
+    const finalImage = await sharp(resizedBuffer)
+      .composite([{ input: Buffer.from(hullSVG), blend: "over" }])
+      .png()
+      .toBuffer();
+
+    redisPub.publish(
       `user:${socketId}`,
-      JSON.stringify({ 
-        type: "image", 
-        step: 4,
-        data: finalBuffer.toString("base64") 
-      })
+      JSON.stringify({ type: "image", step: 4, data: finalImage.toString("base64") })
     );
 
-    await redisPub.publish(
-      `user:${socketId}`,
-      JSON.stringify({ type: "complete" })
-    );
+    redisPub.publish(`user:${socketId}`, JSON.stringify({ type: "complete" }));
 
-    console.log(`Image processing completed for ${socketId}`);
 
   } catch (error) {
     console.error("Image processing error:", error);

@@ -34,6 +34,25 @@
         background: rgba(0, 255, 200, 0.05);
     }
 
+@media (min-width: 1024px) {
+        .main {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .img-box img {
+            max-width: 250px;
+            height: 250px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .img-box img {
+            max-width: 200px;
+            height: 200px;
+        }
+    }
     .panel h2 {
         margin-top: 0;
         font-size: 20px;
@@ -129,13 +148,10 @@
             <img id="step2" width="200">
         </div>
 
-        <div class="img-box">
-            <h3>Step 3: Edge Detection</h3>
-            <img id="step3" width="200">
-        </div>
+        
 
         <div class="img-box">
-            <h3>Step 4: Convex Hull</h3>
+            <h3>Step 3: Convex Hull</h3>
             <img id="step4" width="200">
         </div>
     </div>
@@ -191,7 +207,9 @@ let currentStep = null;
 let totalBytesReceived = 0;
 
 const term = document.getElementById("terminal");
+const pixelCanvas = document.getElementById("pixelCanvas");
 const pixelCtx = pixelCanvas.getContext("2d");
+
 
 function log(msg) {
     term.innerHTML += msg + "<br>";
@@ -271,13 +289,15 @@ async function doStep() {
     }
 }
 
-playBtn.onclick = () => {
+function startPlaying() {
     if (hullStepsQueue.length === 0) return;
     algoPlaying = true;
     playBtn.disabled = true;
     pauseBtn.disabled = false;
     doStep();
-};
+}
+
+playBtn.onclick = startPlaying;
 
 pauseBtn.onclick = () => {
     algoPlaying = false;
@@ -314,7 +334,7 @@ socket.onmessage = (event) => {
         // Handle edge points
         if (msg.type === "points") {
             edgePoints = msg.points;
-            log(`📍 Received ${edgePoints.length} edge points`);
+            log(`Received ${edgePoints.length} edge points`);
             renderPointsList();
             drawAll();
             return;
@@ -323,6 +343,7 @@ socket.onmessage = (event) => {
         // Handle hull animation steps
         if (msg.type === "hull-step") {
             hullStepsQueue.push(msg.step);
+            startPlaying();
             return;
         }
 
@@ -330,8 +351,8 @@ socket.onmessage = (event) => {
         if (msg.type === "meta") {
             currentStep = msg.step;
             document.getElementById("progress").style.width =
-                (currentStep * 25) + "%";
-            log(`⚙️ Processing step ${currentStep}...`);
+                (currentStep * 33.3) + "%";
+            log(`Processing step ${currentStep}...`);
             return;
         }
 
@@ -373,13 +394,13 @@ socket.onmessage = (event) => {
 
         // Handle completion
         if (msg.type === "complete") {
-            log("✅ Processing complete!");
+            log("Processing complete!");
             return;
         }
 
         // Handle errors
         if (msg.type === "error") {
-            log(`❌ Error: ${msg.message}`);
+            log(`Error: ${msg.message}`);
             return;
         }
 
@@ -389,25 +410,27 @@ socket.onmessage = (event) => {
 };
 
 socket.onerror = (error) => {
-    log("❌ WebSocket error");
+    log("WebSocket error");
     console.error(error);
 };
 
 socket.onclose = () => {
-    log("❌ Disconnected from server");
+    log("Disconnected from server");
 };
 
 /* ---------------------- FILE UPLOAD ---------------------- */
 uploadInput.onchange = (e) => {
     selectedFile = e.target.files[0];
-    log("🖼️ Selected: " + selectedFile.name);
+    log("Selected: " + selectedFile.name);
 };
+
+
 
 sendBtn.onclick = async () => {
     if (!selectedFile) return alert("Select an image first!");
     if (!socketId) return alert("Not connected to server!");
     
-    log("⏳ Sending image...");
+    log("Sending image...");
     
     // Convert file to base64
     const reader = new FileReader();
@@ -428,12 +451,12 @@ sendBtn.onclick = async () => {
             });
             
             if (response.ok) {
-                log("✔️ Image sent for processing");
+                log("Image sent for processing");
             } else {
-                log("❌ Failed to send image");
+                log("Failed to send image");
             }
         } catch (error) {
-            log("❌ Error: " + error.message);
+            log("Error: " + error.message);
         }
     };
     reader.readAsDataURL(selectedFile);
