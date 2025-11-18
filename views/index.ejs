@@ -1,184 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Convex Hull Visualizer</title>
-
 <style>
-    body {
-        margin: 0;
-        padding: 0;
-        font-family: monospace;
-        background: #0e0e0e;
-        color: #00ffea;
-    }
-
-    h1 {
-        text-align: center;
-        padding: 20px;
-    }
-
-    .main {
-        width: 95%;
-        margin: auto;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-
-    .panel {
-        border: 1px solid #00ffc3;
-        padding: 20px;
-        border-radius: 5px;
-        background: rgba(0, 255, 200, 0.05);
-    }
-
-@media (min-width: 1024px) {
-        .main {
-            grid-template-columns: 1fr 1fr;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .img-box img {
-            max-width: 250px;
-            height: 250px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .img-box img {
-            max-width: 200px;
-            height: 200px;
-        }
-    }
-    .panel h2 {
-        margin-top: 0;
-        font-size: 20px;
-        color: #00ffc3;
-    }
-
-    #terminal {
-        background: #000;
-        height: 250px;
-        overflow-y: scroll;
-        padding: 10px;
-        font-size: 13px;
-        border: 1px solid #00ffc3;
-    }
-
-    .img-box {
-        border: 1px solid #00ffc3;
-        padding: 10px;
-        margin-bottom: 15px;
-        text-align: center;
-    }
-
-    .progress-bar-container {
-        margin: 10px 0;
-        height: 10px;
-        width: 100%;
-        background: #044;
-        border-radius: 5px;
-    }
-
-    .progress-bar {
-        height: 10px;
-        width: 0%;
-        background: #00ffea;
-        transition: width 0.5s ease;
-    }
-
-    #pixelCanvas {
-        border: 1px solid #00ffc3;
-        background: #000;
-    }
-
-    button {
-        padding: 10px 15px;
-        background: #00ffea;
-        border: none;
-        color: #000;
-        font-weight: bold;
-        cursor: pointer;
-        margin-top: 12px;
-    }
+    body { margin: 0; padding: 0; font-family: monospace; background: #0e0e0e; color: #00ffea; }
+    h1 { text-align: center; padding: 20px; }
+    .main { width: 95%; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .panel { border: 1px solid #00ffc3; padding: 20px; border-radius: 5px; background: rgba(0,255,200,0.05); }
+    @media (min-width: 1024px) { .main { grid-template-columns: 1fr 1fr; } }
+    #terminal { background: #000; height: 250px; overflow-y: scroll; padding: 10px; font-size: 13px; border: 1px solid #00ffc3; }
+    .img-box { border: 1px solid #00ffc3; padding: 10px; margin-bottom: 15px; text-align: center; }
+    .progress-bar-container { margin: 10px 0; height: 10px; width: 100%; background: #044; border-radius: 5px; overflow: hidden; }
+    .progress-bar { height: 10px; width: 0%; background: #00ffea; transition: width 0.5s ease; }
+    #pixelCanvas { border: 1px solid #00ffc3; background: #000; }
+    button { padding: 10px 15px; background: #00ffea; border: none; color: #000; font-weight: bold; cursor: pointer; margin-top: 12px; }
 </style>
 </head>
-
 <body>
-
 <h1>Convex Hull Visualizer</h1>
 
 <div class="main">
+  <div class="panel">
+    <h2>Upload & Controls</h2>
+    <h2><u>Try to upload single object image</u></h2>
+    <input type="file" id="uploadInput" accept="image/*" />
+    <button id="sendBtn">Process Image</button>
+    <p id="status"></p>
 
-    <!-- LEFT SIDE PANELS -->
-    <div class="panel">
-        <h2>Upload & Controls</h2>
-        <h2><u>Try to upload single object image</u></h2>
-        <input type="file" id="uploadInput" accept="image/*">
-        <button id="sendBtn">Process Image</button>
-        <p id="status"></p>
+    <h2>Live Processing Logs</h2>
+    <div id="terminal"></div>
 
-        <h2>Live Processing Logs</h2>
-        <div id="terminal"></div>
+    <h2>Byte Stream Monitor</h2>
+    <p id="byteCount">Received: 0 KB</p>
 
-        <h2>Byte Stream Monitor</h2>
-        <p id="byteCount">Received: 0 KB</p>
+    <h2>Pixel Activity</h2>
+    <canvas id="pixelCanvas" width="200" height="200"></canvas>
+  </div>
 
-        <h2>Pixel Activity</h2>
-        <canvas id="pixelCanvas" width="200" height="200"></canvas>
+  <div class="panel">
+    <h2>Processing Progress</h2>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progress"></div>
     </div>
 
-    <!-- RIGHT SIDE PANELS: IMAGES -->
-    <div class="panel">
-        <h2>Processing Progress</h2>
-        <div class="progress-bar-container">
-            <div class="progress-bar" id="progress"></div>
-        </div>
-
-        <div class="img-box">
-            <h3>Step 1: Resized Image</h3>
-            <img id="step1" width="200">
-        </div>
-
-        <div class="img-box">
-            <h3>Step 2: Grayscale</h3>
-            <img id="step2" width="200">
-        </div>
-
-        
-
-        <div class="img-box">
-            <h3>Step 3: Convex Hull</h3>
-            <img id="step4" width="200">
-        </div>
-    </div>
-    
-    <div class="panel" style="grid-column: span 2;">
-        <h2>Convex Hull Algorithm Visualizer</h2>
-
-        <div style="display:flex; gap:16px; align-items:flex-start;">
-
-            <canvas id="algoCanvas" width="400" height="400" 
-                    style="border:1px solid #00ffc3; background:#000;"></canvas>
-
-            <div style="width:350px;">
-                <div style="margin-bottom:8px;">
-                    <button id="playBtn">Play</button>
-                    <button id="pauseBtn" disabled>Pause</button>
-                    <button id="stepBtn">Step</button>
-                    <span id="algoStatus" style="margin-left:12px; color:#0f0;"></span>
-                </div>
-
-                <h4>Edge Points (click to highlight)</h4>
-                <div id="pointsList"
-                     style="height:300px; overflow:auto; border:1px solid #00ffc3; padding:6px;"></div>
-            </div>
-        </div>
+    <div class="img-box">
+      <h3>Step 1: Resized Image</h3>
+      <img id="step1" width="200" alt="step1"/>
     </div>
 
+    <div class="img-box">
+      <h3>Step 2: Grayscale</h3>
+      <img id="step2" width="200" alt="step2"/>
+    </div>
+
+  
+
+    <div class="img-box">
+      <h3>Step 3: Convex Hull</h3>
+      <img id="step4" width="200" alt="step3"/>
+    </div>
+  </div>
+
+  <div class="panel" style="grid-column: span 2;">
+    <h2>Convex Hull Algorithm Visualizer</h2>
+    <div style="display:flex; gap:16px; align-items:flex-start;">
+      <canvas id="algoCanvas" width="400" height="400" style="border:1px solid #00ffc3; background:#000;"></canvas>
+      <div style="width:350px;">
+        <div style="margin-bottom:8px;">
+          <button id="playBtn">Play</button>
+          <button id="pauseBtn" disabled>Pause</button>
+          <button id="stepBtn">Step</button>
+          <span id="algoStatus" style="margin-left:12px; color:#0f0;"></span>
+        </div>
+        <h4>Edge Points (click to highlight)</h4>
+        <div id="pointsList" style="height:300px; overflow:auto; border:1px solid #00ffc3; padding:6px;"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -197,11 +97,16 @@ const actx = algoCanvas.getContext("2d");
 const pointsListDiv = document.getElementById("pointsList");
 const algoStatus = document.getElementById("algoStatus");
 
-const scale = 2;
+const scale = 2; // backend resizes to width=200, canvas is 400: scale=2 fits
 
-const socket = new WebSocket(
-  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
-);
+// DOM elements that were missing previously
+const playBtn  = document.getElementById("playBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const stepBtn  = document.getElementById("stepBtn");
+const uploadInput = document.getElementById("uploadInput");
+const sendBtn = document.getElementById("sendBtn");
+
+const socket = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host);
 let selectedFile = null;
 let currentStep = null;
 let totalBytesReceived = 0;
@@ -210,23 +115,27 @@ const term = document.getElementById("terminal");
 const pixelCanvas = document.getElementById("pixelCanvas");
 const pixelCtx = pixelCanvas.getContext("2d");
 
-
 function log(msg) {
-    term.innerHTML += msg + "<br>";
+    const time = new Date().toLocaleTimeString();
+    term.innerHTML += `[${time}] ${msg}<br>`;
     term.scrollTop = term.scrollHeight;
 }
 
 /* ---------------------- DRAWING LOGIC ---------------------- */
 function drawAll() {
+    // clear algorithm canvas
     actx.fillStyle = "#000";
     actx.fillRect(0, 0, algoCanvas.width, algoCanvas.height);
 
+    // draw all edge points (small gray squares)
     actx.fillStyle = "#888";
     for (const p of edgePoints) {
+        if (!Array.isArray(p) || p.length < 2) continue;
         actx.fillRect(p[0] * scale, p[1] * scale, 2, 2);
     }
 
-    if (currentStack.length > 0) {
+    // draw current hull stack as polyline
+    if (currentStack && currentStack.length > 0) {
         actx.strokeStyle = "#00ffea";
         actx.lineWidth = 2;
         actx.beginPath();
@@ -236,6 +145,7 @@ function drawAll() {
         }
         actx.stroke();
 
+        // draw hull points
         for (const p of currentStack) {
             actx.fillStyle = "#00ffea";
             actx.beginPath();
@@ -244,8 +154,10 @@ function drawAll() {
         }
     }
 
-    if (currentConsider) {
+    // highlight currently considered point
+    if (currentConsider && Array.isArray(currentConsider)) {
         actx.strokeStyle = "yellow";
+        actx.lineWidth = 2;
         actx.beginPath();
         actx.arc(currentConsider[0] * scale, currentConsider[1] * scale, 6, 0, Math.PI * 2);
         actx.stroke();
@@ -266,7 +178,28 @@ function renderPointsList() {
     });
 }
 
+/* normalize a step object to { point, stack, action } */
+function normalizeStep(step) {
+    if (!step) return null;
 
+    // possible names for point
+    const point = step.point || step.p || step.pt || step.pointCoord || step.position || null;
+
+    // possible names for stack/hull
+    const stack = step.stack || step.hull || step.currentStack || step.stackPoints || null;
+
+    // possible names for action
+    const action = step.action || step.type || step.op || step.opType || step.actionType || null;
+
+    // If step is simply an array like [x,y], treat as consider
+    if (!point && Array.isArray(step) && step.length === 2 && typeof step[0] === "number") {
+        return { point: step, stack: [], action: "consider" };
+    }
+
+    return { point: point || null, stack: stack || [], action: action || "step" };
+}
+
+/* ---------------------- STEP PLAYBACK ---------------------- */
 async function doStep() {
     if (hullStepsQueue.length === 0) {
         algoPlaying = false;
@@ -276,12 +209,13 @@ async function doStep() {
         return;
     }
 
-    const step = hullStepsQueue.shift();
+    const raw = hullStepsQueue.shift();
+    const step = normalizeStep(raw);
 
     currentConsider = step.point;
-    currentStack = step.stack || [];
+    currentStack = Array.isArray(step.stack) ? step.stack : [];
+    algoStatus.innerText = `Action: ${step.action || "step"}`;
 
-    algoStatus.innerText = `Action: ${step.action}`;
     drawAll();
 
     if (algoPlaying) {
@@ -297,8 +231,9 @@ function startPlaying() {
     doStep();
 }
 
-playBtn.onclick = ()=>{
-     if (hullStepsQueue.length === 0) return;
+/* wire buttons */
+playBtn.onclick = () => {
+    if (hullStepsQueue.length === 0) return;
     algoPlaying = true;
     playBtn.disabled = true;
     pauseBtn.disabled = false;
@@ -320,90 +255,103 @@ stepBtn.onclick = () => {
 socket.onopen = () => log("✔ Connected to WebSocket server");
 
 socket.onmessage = (event) => {
-    // All messages are now JSON strings
     try {
         const msg = JSON.parse(event.data);
 
-        // Handle welcome message with socketId
+        // welcome / id
         if (msg.type === "welcome") {
             socketId = msg.socketId;
             log(`✔ Connected with ID: ${socketId}`);
             return;
         }
 
-        // Handle log messages
+        // logs
         if (msg.type === "log") {
             log(msg.text);
             return;
         }
 
-        // Handle edge points
+        // points array
         if (msg.type === "points") {
-            edgePoints = msg.points;
-            log(`Received ${edgePoints.length} edge points`);
-            renderPointsList();
-            drawAll();
+            if (Array.isArray(msg.points)) {
+                edgePoints = msg.points;
+                log(`Received ${edgePoints.length} edge points`);
+                renderPointsList();
+                drawAll();
+            } else {
+                log("Received points message, but payload was not an array.");
+            }
             return;
         }
 
-        // Handle hull animation steps
+        // hull steps (backend sends entire array under "hull-steps")
+        if (msg.type === "hull-steps" || msg.type === "hullSteps") {
+            const arr = msg.steps || msg.data || null;
+            if (Array.isArray(arr)) {
+                for (const s of arr) hullStepsQueue.push(s);
+                log(`Enqueued ${arr.length} hull steps`);
+                // automatically start playing if not already
+                if (!algoPlaying) startPlaying();
+            } else {
+                log("Received hull-steps message but `steps` is not an array.");
+            }
+            return;
+        }
+
+        // singular hull-step (accept both)
         if (msg.type === "hull-step") {
             hullStepsQueue.push(msg.step);
+            log("Enqueued 1 hull-step");
+            if (!algoPlaying) startPlaying();
             return;
         }
 
-        // Handle metadata (step progress)
+        // meta/progress
         if (msg.type === "meta") {
             currentStep = msg.step;
-            document.getElementById("progress").style.width =
-                (currentStep * 33) + "%";
+            document.getElementById("progress").style.width = (currentStep * 33) + "%";
             log(`Processing step ${currentStep}...`);
             return;
         }
 
-        // Handle image data (base64 encoded)
+        // image chunks
         if (msg.type === "image") {
             const base64Data = msg.data;
-            const step = msg.step;
-            
-            // Convert base64 to blob
+            const step = msg.step; // integer 1..4
+            if (!base64Data) return;
+
+            // convert base64 to blob URL
             const byteString = atob(base64Data);
             const byteArray = new Uint8Array(byteString.length);
-            for (let i = 0; i < byteString.length; i++) {
-                byteArray[i] = byteString.charCodeAt(i);
-            }
+            for (let i = 0; i < byteString.length; i++) byteArray[i] = byteString.charCodeAt(i);
             const blob = new Blob([byteArray], { type: "image/png" });
             const url = URL.createObjectURL(blob);
 
-            // Display image
             const imgElement = document.getElementById("step" + step);
             if (imgElement) {
                 imgElement.src = url;
                 log(`Step ${step} image received`);
+            } else {
+                log(`Received image for step ${step} but no <img id="step${step}"> found`);
             }
 
-            // Update byte counter
+            // update byte counter
             totalBytesReceived += byteArray.length;
-            document.getElementById("byteCount").innerText =
-                `Received: ${(totalBytesReceived / 1024).toFixed(2)} KB`;
+            document.getElementById("byteCount").innerText = `Received: ${(totalBytesReceived / 1024).toFixed(2)} KB`;
 
-            // Pixel noise flicker
+            // Pixel noise flicker (visual cue)
             for (let i = 0; i < 50; i++) {
-                pixelCtx.fillStyle = `rgb(${Math.random()*255|0},
-                                         ${Math.random()*255|0},
-                                         ${Math.random()*255|0})`;
+                pixelCtx.fillStyle = `rgb(${Math.random()*255|0}, ${Math.random()*255|0}, ${Math.random()*255|0})`;
                 pixelCtx.fillRect(Math.random()*200, Math.random()*200, 2, 2);
             }
             return;
         }
 
-        // Handle completion
         if (msg.type === "complete") {
             log("Processing complete!");
             return;
         }
 
-        // Handle errors
         if (msg.type === "error") {
             log(`Error: ${msg.message}`);
             return;
@@ -411,6 +359,7 @@ socket.onmessage = (event) => {
 
     } catch (error) {
         console.error("Error parsing message:", error);
+        log("Error parsing incoming WebSocket message (see console).");
     }
 };
 
@@ -426,35 +375,24 @@ socket.onclose = () => {
 /* ---------------------- FILE UPLOAD ---------------------- */
 uploadInput.onchange = (e) => {
     selectedFile = e.target.files[0];
-    log("Selected: " + selectedFile.name);
+    if (selectedFile) log("Selected: " + selectedFile.name);
 };
-
-
 
 sendBtn.onclick = async () => {
     if (!selectedFile) return alert("Select an image first!");
     if (!socketId) return alert("Not connected to server!");
-    
+
     log("Sending image...");
-    
-    // Convert file to base64
+
     const reader = new FileReader();
     reader.onload = async () => {
-        const base64Data = reader.result.split(',')[1]; // Remove data:image/png;base64, prefix
-        
-        // Send via HTTP POST to trigger Redis job
+        const base64Data = reader.result.split(',')[1]; // Remove prefix
         try {
             const response = await fetch('/api/process-image', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    socketId: socketId,
-                    image: base64Data
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ socketId: socketId, image: base64Data })
             });
-            
             if (response.ok) {
                 log("Image sent for processing");
             } else {
@@ -467,6 +405,5 @@ sendBtn.onclick = async () => {
     reader.readAsDataURL(selectedFile);
 };
 </script>
-
 </body>
 </html>
