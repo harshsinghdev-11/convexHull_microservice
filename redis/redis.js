@@ -8,11 +8,6 @@ const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
 const redisUsername = process.env.redisUsername;
 const redisPassword = process.env.redisPassword; 
 
-console.log(typeof redisHost);
-console.log(typeof redisPort);
-console.log(typeof redisUsername);
-console.log(Number(process.env.redis_port));
-
 
 
 
