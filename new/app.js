@@ -1,2 +1,1 @@
-console.log("hi")
-console.log("this is latest commit")
+console.log("prepare for mlt")
